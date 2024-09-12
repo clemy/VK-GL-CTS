@@ -1970,6 +1970,7 @@ de::MovePtr<StdVideoH264PictureParameterSet> getStdVideoH264DecodePictureParamet
 
 de::MovePtr<VkVideoEncodeInfoKHR> getVideoEncodeInfo(const void *pNext, const VkBuffer &dstBuffer,
                                                      const VkDeviceSize &dstBufferOffset,
+                                                     const VkDeviceSize &dstBufferRange,
                                                      const VkVideoPictureResourceInfoKHR &srcPictureResource,
                                                      const VkVideoReferenceSlotInfoKHR *pSetupReferenceSlot,
                                                      const uint32_t &referenceSlotCount,
@@ -1981,7 +1982,7 @@ de::MovePtr<VkVideoEncodeInfoKHR> getVideoEncodeInfo(const void *pNext, const Vk
         static_cast<VkVideoEncodeFlagsKHR>(0),   //  VkVideoEncodeFlagsKHR flags;
         dstBuffer,                               //  VkBuffer dstBuffer;
         dstBufferOffset,                         //  VkDeviceSize dstBufferOffset;
-        0u,                                      //  VkDeviceSize dstBufferRange;
+        dstBufferRange,                          //  VkDeviceSize dstBufferRange;
         srcPictureResource,                      //  VkVideoPictureResourceInfoKHR srcPictureResource;
         pSetupReferenceSlot,                     //  const VkVideoReferenceSlotInfoKHR* pSetupReferenceSlot;
         referenceSlotCount,                      //  uint32_t referenceSlotCount;
