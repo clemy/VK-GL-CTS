@@ -345,6 +345,7 @@ de::MovePtr<VkVideoCodingControlInfoKHR> getVideoCodingControlInfo(VkVideoCoding
 
 de::MovePtr<VkVideoEncodeInfoKHR> getVideoEncodeInfo(const void *pNext, const VkVideoEncodeFlagsKHR encodeFlags,
                                                      const VkBuffer &dstBuffer, const VkDeviceSize &dstBufferOffset,
+                                                     const VkDeviceSize &dstBufferRange,
                                                      const VkVideoPictureResourceInfoKHR &srcPictureResource,
                                                      const VkVideoReferenceSlotInfoKHR *pSetupReferenceSlot,
                                                      const uint32_t &referenceSlotCount,

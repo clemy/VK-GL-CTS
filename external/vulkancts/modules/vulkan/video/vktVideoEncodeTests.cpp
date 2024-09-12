@@ -2701,6 +2701,7 @@ tcu::TestStatus VideoEncodeTestInstance::iterate(void)
 
             videoEncodeFrameInfos.push_back(
                 getVideoEncodeInfo(videoEncodePictureInfoPtr, encodeFlags, *encodeBuffer, dstBufferOffset,
+                                   encodeBufferSize - dstBufferOffset,
                                    (*imagePictureResourceVector[srcPictureResourceIdx]), setupReferenceSlotPtr,
                                    refsCount, (refsPool == 0) ? nullptr : referenceSlots));
 
