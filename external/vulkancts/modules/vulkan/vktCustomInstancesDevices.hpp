@@ -203,9 +203,13 @@ public:
     vk::VkDevice getDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsRequired               = 0,
                                           const VideoCodecOperationFlags videoCodecOperationFlags = 0,
                                           const VideoDeviceFlags videoDeviceFlags = VIDEO_DEVICE_FLAG_NONE);
+    vk::VkDevice getAnyDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsRequired               = 0,
+                                          const VideoCodecOperationFlags videoCodecOperationFlags = 0,
+                                          const VideoDeviceFlags videoDeviceFlags = VIDEO_DEVICE_FLAG_NONE);
     bool createDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsRequired,
                                      const VideoCodecOperationFlags videoCodecOperationFlags,
                                      const VideoDeviceFlags videoDeviceFlags = VIDEO_DEVICE_FLAG_NONE);
+    vk::VkPhysicalDevice getPhysicalDevice(void) const;
     const vk::DeviceDriver &getDeviceDriver(void);
     uint32_t getQueueFamilyIndexTransfer(void) const;
     uint32_t getQueueFamilyIndexDecode(void) const;
@@ -216,6 +220,7 @@ public:
 protected:
     Context &m_context;
 
+    vk::VkPhysicalDevice m_physicalDevice;
     vk::Move<vk::VkDevice> m_logicalDevice;
     de::MovePtr<vk::DeviceDriver> m_deviceDriver;
     de::MovePtr<vk::Allocator> m_allocator;

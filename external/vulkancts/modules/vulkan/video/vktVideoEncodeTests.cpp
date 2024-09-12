@@ -1320,6 +1320,10 @@ public:
     tcu::TestStatus iterate(void);
 
 protected:
+    VkDevice getDecodeDeviceSupportingQueue(
+        VkQueueFlags queueFlagsRequired = 0, VkVideoCodecOperationFlagsKHR videoCodecOperationFlags = 0,
+        VideoDevice::VideoDeviceFlags videoDeviceFlags = VideoDevice::VIDEO_DEVICE_FLAG_NONE);
+
     Move<VkQueryPool> createEncodeVideoQueries(const DeviceInterface &videoDeviceDriver, VkDevice device,
                                                uint32_t numQueries, const VkVideoProfileInfoKHR *pVideoProfile);
 
@@ -1335,16 +1339,26 @@ protected:
     VkFormat getResultImageFormat(void);
 
     const TestDefinition *m_testDefinition;
+    VideoDevice m_videoDecodeDevice;
 };
 
 VideoEncodeTestInstance::VideoEncodeTestInstance(Context &context, const TestDefinition *testDefinition)
     : VideoBaseTestInstance(context)
     , m_testDefinition(testDefinition)
+    , m_videoDecodeDevice(context)
 {
 }
 
 VideoEncodeTestInstance::~VideoEncodeTestInstance(void)
 {
+}
+
+VkDevice VideoEncodeTestInstance::getDecodeDeviceSupportingQueue(const VkQueueFlags queueFlagsRequired,
+                                                         const VkVideoCodecOperationFlagsKHR videoCodecOperationFlags,
+                                                         const VideoDevice::VideoDeviceFlags videoDeviceFlags)
+{
+    return m_videoDecodeDevice.getAnyDeviceSupportingQueue(queueFlagsRequired, videoCodecOperationFlags,
+                                                           videoDeviceFlags);
 }
 
 Move<VkQueryPool> VideoEncodeTestInstance::createEncodeVideoQueries(const DeviceInterface &videoDeviceDriver,
@@ -1524,18 +1538,24 @@ tcu::TestStatus VideoEncodeTestInstance::iterate(void)
 
     const InstanceInterface &vki          = m_context.getInstanceInterface();
     const VkPhysicalDevice physicalDevice = m_context.getPhysicalDevice();
-    const VkDevice videoDevice =
-        getDeviceSupportingQueue(VK_QUEUE_VIDEO_ENCODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_TRANSFER_BIT,
-                                 videoCodecEncodeOperation | videoCodecDecodeOperation, videoDeviceFlags);
+    const VkDevice videoDevice       = getDeviceSupportingQueue(VK_QUEUE_VIDEO_ENCODE_BIT_KHR | VK_QUEUE_TRANSFER_BIT,
+                                                                videoCodecEncodeOperation, videoDeviceFlags);
     const DeviceInterface &videoDeviceDriver = getDeviceDriver();
 
     const uint32_t encodeQueueFamilyIndex   = getQueueFamilyIndexEncode();
-    const uint32_t decodeQueueFamilyIndex   = getQueueFamilyIndexDecode();
     const uint32_t transferQueueFamilyIndex = getQueueFamilyIndexTransfer();
 
     const VkQueue encodeQueue   = getDeviceQueue(videoDeviceDriver, videoDevice, encodeQueueFamilyIndex, 0u);
-    const VkQueue decodeQueue   = getDeviceQueue(videoDeviceDriver, videoDevice, decodeQueueFamilyIndex, 0u);
-    const VkQueue transferQueue = getDeviceQueue(videoDeviceDriver, videoDevice, transferQueueFamilyIndex, 0u);
+
+    const VkDevice videoDecodeDevice = getDecodeDeviceSupportingQueue(
+        VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_TRANSFER_BIT, videoCodecDecodeOperation, videoDeviceFlags);
+    const VkPhysicalDevice physicalDecodeDevice    = m_videoDecodeDevice.getPhysicalDevice();
+    const DeviceInterface &videoDecodeDeviceDriver = m_videoDecodeDevice.getDeviceDriver();
+    const uint32_t decodeQueueFamilyIndex          = m_videoDecodeDevice.getQueueFamilyIndexDecode();
+    const uint32_t decodeTransferQueueFamilyIndex  = m_videoDecodeDevice.getQueueFamilyIndexTransfer();
+    const VkQueue decodeQueue = getDeviceQueue(videoDeviceDriver, videoDecodeDevice, decodeQueueFamilyIndex, 0u);
+    const VkQueue decodeTransferQueue =
+        getDeviceQueue(videoDeviceDriver, videoDecodeDevice, decodeTransferQueueFamilyIndex, 0u);
 
     const MovePtr<VkVideoEncodeH264CapabilitiesKHR> videoH264CapabilitiesExtension =
         getVideoCapabilitiesExtensionH264E();
@@ -2346,12 +2366,12 @@ tcu::TestStatus VideoEncodeTestInstance::iterate(void)
 // Vulkan video is not supported on android platform
 // all external libraries, helper functions and test instances has been excluded
 #ifdef DE_BUILD_VIDEO
-    DeviceContext deviceContext(&m_context, &m_videoDevice, physicalDevice, videoDevice, decodeQueue, encodeQueue,
-                                transferQueue);
+    DeviceContext deviceContext(&m_context, &m_videoDecodeDevice, physicalDecodeDevice, videoDecodeDevice, decodeQueue,
+                                VK_NULL_HANDLE, decodeTransferQueue);
 
-    const Unique<VkCommandPool> decodeCmdPool(makeCommandPool(videoDeviceDriver, videoDevice, decodeQueueFamilyIndex));
-    const Unique<VkCommandBuffer> decodeCmdBuffer(
-        allocateCommandBuffer(videoDeviceDriver, videoDevice, *decodeCmdPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    const Unique<VkCommandPool> decodeCmdPool(makeCommandPool(videoDecodeDeviceDriver, videoDecodeDevice, decodeQueueFamilyIndex));
+    const Unique<VkCommandBuffer> decodeCmdBuffer(allocateCommandBuffer(
+        videoDecodeDeviceDriver, videoDecodeDevice, *decodeCmdPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
 
     uint32_t H264profileIdc = STD_VIDEO_H264_PROFILE_IDC_MAIN;
     uint32_t H265profileIdc = STD_VIDEO_H265_PROFILE_IDC_MAIN;
@@ -2436,8 +2456,10 @@ tcu::TestStatus VideoEncodeTestInstance::iterate(void)
     return tcu::TestStatus::pass(passMessage);
 
 #else
-    DE_UNREF(transferQueue);
+    DE_UNREF(physicalDecodeDevice);
+    DE_UNREF(videoDecodeDeviceDriver);
     DE_UNREF(decodeQueue);
+    DE_UNREF(decodeTransferQueue);
     TCU_THROW(NotSupportedError, "Vulkan video is not supported on android platform");
 #endif
 }
