@@ -643,6 +643,7 @@ void VideoDevice::checkSupport(Context &context, const VideoCodecOperationFlags 
 
 VideoDevice::VideoDevice(Context &context)
     : m_context(context)
+    , m_physicalDevice(context.getPhysicalDevice())
     , m_logicalDevice()
     , m_deviceDriver()
     , m_allocator()
@@ -811,6 +812,42 @@ vk::VkDevice VideoDevice::getDeviceSupportingQueue(const vk::VkQueueFlags queueF
 #endif
 }
 
+vk::VkDevice VideoDevice::getAnyDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsRequired,
+                                                   const VideoCodecOperationFlags videoCodecOperationFlags,
+                                                   const VideoDevice::VideoDeviceFlags videoDeviceFlags)
+{
+#ifndef CTS_USES_VULKANSC
+    if (*m_logicalDevice == nullptr)
+    {
+        DE_ASSERT(static_cast<uint32_t>(queueFlagsRequired) != 0u);
+        DE_ASSERT(static_cast<uint32_t>(videoCodecOperationFlags) != 0u);
+
+        if (!createDeviceSupportingQueue(queueFlagsRequired, videoCodecOperationFlags, videoDeviceFlags))
+        {
+            const vector<vk::VkPhysicalDevice> devices = vk::enumeratePhysicalDevices(m_context.getInstanceInterface(), m_context.getInstance());
+            for (uint32_t deviceNdx = 0u; deviceNdx < devices.size(); ++deviceNdx)
+            {
+                m_physicalDevice = devices[deviceNdx];
+                if (createDeviceSupportingQueue(queueFlagsRequired, videoCodecOperationFlags, videoDeviceFlags))
+                {
+                    return *m_logicalDevice;
+                }
+            }
+            m_physicalDevice = m_context.getPhysicalDevice();
+            TCU_THROW(NotSupportedError, "Cannot create device with required parameters");
+        }
+    }
+
+    return *m_logicalDevice;
+#else
+    DE_UNREF(queueFlagsRequired);
+    DE_UNREF(videoCodecOperationFlags);
+    DE_UNREF(videoDeviceFlags);
+
+    TCU_THROW(NotSupportedError, "Video is not supported for Vulkan SC");
+#endif
+}
+
 bool VideoDevice::createDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsRequired,
                                               const VideoCodecOperationFlags videoCodecOperationFlags,
                                               const VideoDeviceFlags videoDeviceFlags)
@@ -818,7 +855,7 @@ bool VideoDevice::createDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsR
 #ifndef CTS_USES_VULKANSC
     const vk::PlatformInterface &vkp          = m_context.getPlatformInterface();
     const vk::InstanceInterface &vki          = m_context.getInstanceInterface();
-    const vk::VkPhysicalDevice physicalDevice = m_context.getPhysicalDevice();
+    const vk::VkPhysicalDevice physicalDevice = m_physicalDevice;
     const vk::VkInstance instance             = m_context.getInstance();
     const uint32_t apiVersion                 = m_context.getUsedApiVersion();
     const bool validationEnabled              = m_context.getTestContext().getCommandLine().isValidationEnabled();
@@ -1082,6 +1119,11 @@ bool VideoDevice::createDeviceSupportingQueue(const vk::VkQueueFlags queueFlagsR
 
     TCU_THROW(NotSupportedError, "Video is not supported for Vulkan SC");
 #endif
+}
+
+vk::VkPhysicalDevice VideoDevice::getPhysicalDevice(void) const
+{
+    return m_physicalDevice;
 }
 
 const vk::DeviceDriver &VideoDevice::getDeviceDriver(void)

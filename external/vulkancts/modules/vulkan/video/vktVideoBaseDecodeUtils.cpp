@@ -580,7 +580,9 @@ void VideoBaseDecoder::StartVideoSequence(const VkParserDetectedVideoFormat *pVi
 
     if (!(m_videoCaps.flags & VK_VIDEO_CAPABILITY_SEPARATE_REFERENCE_IMAGES_BIT_KHR) && !m_layeredDpb)
     {
-        TCU_THROW(NotSupportedError, "separate reference images are not supported");
+        //TCU_THROW(NotSupportedError, "separate reference images are not supported");
+        std::cout << "video decoder: separate reference images are not supported -> enabling layered DPB" << std::endl;
+        m_layeredDpb = true;
     }
 
     if (m_layeredDpb)
