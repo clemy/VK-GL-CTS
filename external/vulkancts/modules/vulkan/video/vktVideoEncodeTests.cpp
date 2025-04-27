@@ -66,7 +66,7 @@
 #ifndef VK_MAX_NUM_IMAGE_PLANES_KHR
 #define VK_MAX_NUM_IMAGE_PLANES_KHR 4
 #endif
-
+#define STREAM_DUMP_DEBUG 1
 #ifndef STREAM_DUMP_DEBUG
 #define STREAM_DUMP_DEBUG 0
 #endif
@@ -2899,6 +2899,7 @@ tcu::TestStatus VideoEncodeTestInstance::iterate(void)
         string failMessage;
 
         double psnr = util::PSNR(*inVector[NALIdx], *out);
+        std::cout << "Frame " << NALIdx << " has PSNR: " << psnr << std::endl;
 
         // Quality checks
         if (psnr < psnrThresholdLowerLimit)
